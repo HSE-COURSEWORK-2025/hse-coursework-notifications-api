@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     APP_VERSION: str = "dev"
-    APP_TITLE: str = "HSE-COURSEWORK Data Collection API"
+    APP_TITLE: str = "HSE-COURSEWORK Notifications API"
     APP_CONTACT_NAME: str = "MALYSH_II"
     APP_CONTACT_EMAIL: EmailStr = "iimalysh@edu.hse.ru"
     APP_OPENAPI_URL: str = "/openapi.json"
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     APP_REDOC_URL: str | None = None
     PRODUCTION: bool = False
 
-    ROOT_PATH: str | None = "/data-collection-api"
+    ROOT_PATH: str | None = "/notifications-api"
     PORT: int | None = 8080
 
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     REDIS_DATA_COLLECTION_GOOGLE_FITNESS_API_PROGRESS_BAR_NAMESPACE: str | None = "REDIS_DATA_COLLECTION_GOOGLE_FITNESS_API_PROGRESS_BAR_NAMESPACE-"
     REDIS_DATA_COLLECTION_GOOGLE_HEALTH_API_PROGRESS_BAR_NAMESPACE: str | None = "REDIS_DATA_COLLECTION_GOOGLE_HEALTH_API_PROGRESS_BAR_NAMESPACE-"
 
+
+    SMTP_HOST: str | None = "smtp.mail.ru"
+    SMTP_PORT: int | None = 587
+    EMAIL_USERNAME: str | None = "secret"
+    EMAIL_PASSWORD: str | None = "secret"
+    EMAIL_SOURCE_IP: str | None = "192.168.0.180"
+
+
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: str | list[str]) -> str | list[str]:
         if isinstance(v, str) and not v.startswith("["):
@@ -68,8 +76,8 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     class Config:
-        env_file = ".env"
-        # env_file = ".env.development"
+        # env_file = ".env"
+        env_file = ".env.development"
         env_file_encoding = "utf-8"
         case_sensitive = False
         env_nested_delimiter = "__"

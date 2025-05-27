@@ -12,6 +12,7 @@ google-auth
 requests
 redis
 sqlalchemy
+aiosmtplib
 psycopg2-binary
 qrcode
 Pillow
