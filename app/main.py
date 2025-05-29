@@ -96,7 +96,7 @@ async def shutdown_event():
     # await FastAPILimiter.close()
     ...
 
-    await kafka_client.disconnect()
+    # await kafka_client.disconnect()
     await redis_client_async.disconnect()
 
 

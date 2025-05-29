@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     PRODUCTION: bool = False
 
     ROOT_PATH: str | None = "/notifications-api"
-    PORT: int | None = 8080
+    PORT: int | None = 8083
 
     SECRET_KEY: str = secrets.token_urlsafe(32)
 
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int | None = 587
     EMAIL_USERNAME: str | None = "secret"
     EMAIL_PASSWORD: str | None = "secret"
-    EMAIL_SOURCE_IP: str | None = "192.168.0.180"
+    EMAIL_SOURCE_IP: str | None = ip
 
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
@@ -76,8 +76,8 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     class Config:
-        # env_file = ".env"
-        env_file = ".env.development"
+        env_file = ".env"
+        # env_file = ".env.development"
         env_file_encoding = "utf-8"
         case_sensitive = False
         env_nested_delimiter = "__"
