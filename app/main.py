@@ -11,6 +11,7 @@ from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
+
 from app.settings import settings, setup_logging
 from app.api.root import root_router
 from app.api.v1.router import api_v1_router
@@ -21,13 +22,19 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.security import OAuth2PasswordBearer
 
-from app.settings import google_fitness_api_user_clients, google_health_api_user_clients
+from app.settings import google_fitness_api_user_clients, google_health_api_user_clients, notification_user_clients
 from app.services.redisClient import redis_client_async
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
+
+from sqlalchemy.orm import Session
+from app.services.db.db_session import get_session
+from app.services.db.schemas import Notifications
+
+
 import logging
 
 
@@ -127,39 +134,40 @@ app.include_router(root_router)
 
 
 
-async def broadcast_fitness_api_progress():
+async def broadcast_notification_status():
+    """
+    Каждую секунду проверяем по пользователю, есть ли у него 
+    непрочитанные уведомления (checked=False) — и шлём {has_unchecked: bool}.
+    Состояние NOTIFICATIONS в БД НЕ меняется.
+    """
     while True:
-        # Рассылаем всем подключенным клиентам
-        for email in google_fitness_api_user_clients:
-            google_fitness_api_payload = await redis_client_async.get(f'{settings.REDIS_DATA_COLLECTION_GOOGLE_FITNESS_API_PROGRESS_BAR_NAMESPACE}{email}')
-            
-            if google_fitness_api_payload:
-                for sock in google_fitness_api_user_clients[email]:
+        # Для каждого подключённого email
+        for email, sockets in list(notification_user_clients.items()):
+            try:
+                session: Session = await get_session().__anext__()
+                # Открываем сессию
+                # Проверяем наличие хотя бы одного непрочитанного
+                exists = session.query(Notifications).filter_by(
+                    for_email=email,
+                    checked=False
+                ).first() is not None
+
+                payload = json.dumps({"has_unchecked": exists})
+                # Рассылаем всем WS-клиентам этого email
+                for ws in set(sockets):
                     try:
-                        await sock.send_text(google_fitness_api_payload)
-                    except Exception as e:
-                        google_fitness_api_user_clients[email].discard(email)
-
-        await asyncio.sleep(1)
-
-
-async def broadcast_health_api_progress():
-    while True:
-        # Рассылаем всем подключенным клиентам
-        for email in google_health_api_user_clients:
-            google_health_api_payload = await redis_client_async.get(f'{settings.REDIS_DATA_COLLECTION_GOOGLE_HEALTH_API_PROGRESS_BAR_NAMESPACE}{email}')
-            
-            if google_health_api_payload:
-                for sock in google_health_api_user_clients[email]:
-                    try:
-                        await sock.send_text(google_health_api_payload)
-                    except Exception as e:
-                        google_health_api_user_clients[email].discard(email)
+                        await ws.send_text(payload)
+                    except Exception:
+                        # если отвалился — убираем
+                        sockets.discard(ws)
+            except Exception:
+                # гасим любые ошибки, чтобы таска не умирала
+                pass
 
         await asyncio.sleep(1)
 
 
 @app.on_event("startup")
-async def start_broadcast_task():
-    asyncio.create_task(broadcast_fitness_api_progress())
-    asyncio.create_task(broadcast_health_api_progress())
+async def start_broadcast_tasks():
+    
+    asyncio.create_task(broadcast_notification_status())

@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.security import HTTPBearer
 from fastapi import WebSocket
-from typing import Set
+from typing import Set, Dict
 import socket
 
 
@@ -88,7 +88,7 @@ settings = Settings()
 security = HTTPBearer()
 google_fitness_api_user_clients: dict[str, Set[WebSocket]] = {}
 google_health_api_user_clients: dict[str, Set[WebSocket]] = {}
-
+notification_user_clients: Dict[str, Set[WebSocket]] = {}
 
 def setup_logging():
     logging.basicConfig(
