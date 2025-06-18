@@ -28,11 +28,7 @@ async def send_email_notification(
     try:
         session: Session = await get_session().__anext__()
         # Отправка письма
-        await mailer.send(
-            to_email=data.to_email,
-            subject=data.subject,
-            html_content=f"<p>{data.message}</p>"
-        )
+        
 
         # Запись уведомления в БД
         new_notification = Notifications(
@@ -43,6 +39,12 @@ async def send_email_notification(
         )
         session.add(new_notification)
         session.commit()
+
+        await mailer.send(
+            to_email=data.to_email,
+            subject=data.subject,
+            html_content=f"<p>{data.message}</p>"
+        )
 
         return {"status": "Email sent"}
     except Exception as e:
