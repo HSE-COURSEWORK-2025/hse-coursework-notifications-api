@@ -1,5 +1,3 @@
-import enum
-from datetime import datetime
 
 from sqlalchemy import (
     Column,
@@ -7,12 +5,9 @@ from sqlalchemy import (
     String,
     DateTime,
     Text,
-    Enum as SQLEnum,
-    ForeignKey,
-    Boolean
+    Boolean,
 )
-from sqlalchemy.sql import expression
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base
 
 
 Base = declarative_base()

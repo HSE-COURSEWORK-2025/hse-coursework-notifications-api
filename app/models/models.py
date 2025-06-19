@@ -1,7 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from enum import Enum
-from typing import List
-from datetime import  datetime
+from datetime import datetime
 
 
 class TokenData(BaseModel):
