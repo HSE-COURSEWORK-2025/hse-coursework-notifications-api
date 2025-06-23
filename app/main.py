@@ -5,12 +5,12 @@ import json
 from prometheus_fastapi_instrumentator import Instrumentator
 
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from app.settings import settings, setup_logging
+from app.settings import settings
 from app.api.root import root_router
 from app.api.v1.router import api_v1_router
 
@@ -18,7 +18,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.settings import (
-    notification_user_clients,
+    notification_user_clients, app_logger
 )
 from app.services.redisClient import redis_client_async
 
@@ -27,11 +27,11 @@ from sqlalchemy.orm import Session
 from app.services.db.db_session import get_session
 from app.services.db.schemas import Notifications
 
-
+from app.services.utils import PrometheusMiddleware, metrics, setting_otlp
 
 
 logger = logging.getLogger(__name__)
-setup_logging()
+
 
 
 def custom_generate_unique_id(route: APIRoute):
@@ -66,20 +66,34 @@ app = FastAPI(
     swagger_ui_oauth2_redirect_url=settings.APP_DOCS_URL + "/oauth2-redirect",
 )
 
-instrumentator = Instrumentator(
-    should_ignore_untemplated=True,
-    excluded_handlers=["/metrics"],
-).instrument(app)
+# instrumentator = Instrumentator(
+#     should_ignore_untemplated=True,
+#     excluded_handlers=["/metrics"],
+# ).instrument(app)
+
+app.add_middleware(PrometheusMiddleware, app_name=settings.APP_TITLE)
+app.add_route("/metrics", metrics)
+setting_otlp(app, settings.APP_TITLE, settings.OTLP_GRPC_ENDPOINT)
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+    status = response.status_code
+    app_logger.info(
+        f"{request.method} {request.url.path}",
+        extra={"status_code": status}
+    )
+    return response
 
 
 @app.on_event("startup")
 async def startup_event():
-    instrumentator.expose(
-        app,
-        endpoint="/metrics",
-        include_in_schema=False,
-        tags=["root"],
-    )
+    # instrumentator.expose(
+    #     app,
+    #     endpoint="/metrics",
+    #     include_in_schema=False,
+    #     tags=["root"],
+    # )
 
     await redis_client_async.connect()
 
