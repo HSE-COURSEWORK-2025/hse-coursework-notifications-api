@@ -2,6 +2,8 @@
 
 Этот проект реализует сервис уведомлений для курсовой работы (HSE Coursework). Сервис предоставляет REST API для отправки уведомлений
 
+![](https://github.com/HSE-COURSEWORK-2025/hse-coursework-notifications-api/blob/master/swagger_demo.png)
+
 ## Основные возможности
 - Отправка email-уведомлений
 - Хранение уведомлений в PostgreSQL
