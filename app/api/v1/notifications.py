@@ -1,8 +1,10 @@
 import datetime
+import aiohttp
 from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 
+import logging
 from app.services.auth import get_current_user
 from app.settings import security
 from app.services.db.db_session import get_session
@@ -20,6 +22,35 @@ api_v2_get_notifications_router = APIRouter(
 )
 
 
+async def send_email_async(to_email: str, subject: str, message: str):
+    url = "http://192.168.1.15:8080/notifications-api/api/v1/notifications/send_email"
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "to_email": str(to_email),   # Замените на реальный email
+        "subject": str(subject),    # Замените на тему письма
+        "message": str(message)     # Замените на текст письма
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                # Проверка статуса ответа
+                if response.status == 200:
+                    logging.info("Email успешно отправлен!")
+                    data = await response.json()
+                    logging.info("Ответ сервера:", data)
+                else:
+                    logging.error(f"Ошибка! Статус код: {response.status}")
+                    error_text = await response.text()
+                    logging.error("Ответ сервера:", error_text)
+    
+    except Exception as e:
+        logging.error(f"Неожиданная ошибка: {e}")
+
+
 @api_v2_get_notifications_router.post("/send_email", status_code=status.HTTP_200_OK)
 async def send_email_notification(
     data: EmailNotificationRequest,
@@ -35,11 +66,13 @@ async def send_email_notification(
         session.add(new_notification)
         session.commit()
 
-        await mailer.send(
-            to_email=data.to_email,
-            subject=data.subject,
-            html_content=f"<p>{data.message}</p>",
-        )
+        # await mailer.send(
+        #     to_email=data.to_email,
+        #     subject=data.subject,
+        #     html_content=f"<p>{data.message}</p>",
+        # )
+
+        await send_email_async(to_email=data.to_email, subject=data.subject, message=data.message)
 
         return {"status": "Email sent"}
     except Exception as e:
